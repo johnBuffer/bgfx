@@ -61,6 +61,9 @@ public:
     bgfx::DynamicVertexBufferHandle vbh;
     bgfx::DynamicIndexBufferHandle  ibh;
     
+    bgfx::DynamicVertexBufferHandle vbh_;
+    bgfx::DynamicIndexBufferHandle  ibh_;
+    
     uint32_t object_count = 53000;
 
     ExampleHelloWorld(const char* _name, const char* _description, const char* _url)
@@ -99,6 +102,9 @@ public:
         imguiCreate();
         
         Vertex::init();
+        
+        vbh_ = bgfx::createDynamicVertexBuffer(uint32_t{0}, Vertex::s_layout, BGFX_BUFFER_ALLOW_RESIZE);
+        ibh_ = bgfx::createDynamicIndexBuffer(uint32_t{0}, BGFX_BUFFER_ALLOW_RESIZE | BGFX_BUFFER_INDEX32);
         
         vbh = bgfx::createDynamicVertexBuffer(uint32_t{0}, Vertex::s_layout, BGFX_BUFFER_ALLOW_RESIZE);
         ibh = bgfx::createDynamicIndexBuffer(uint32_t{0}, BGFX_BUFFER_ALLOW_RESIZE | BGFX_BUFFER_INDEX32);
