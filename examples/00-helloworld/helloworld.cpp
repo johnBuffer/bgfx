@@ -8,13 +8,60 @@
 #include "bgfx_utils.h"
 #include "logo.h"
 #include "imgui/imgui.h"
+#include <vector>
 
 namespace
 {
 
+// Dummy Vertex struct
+struct Vertex {
+    // 2D space position
+    float x = 0.0f;
+    float y = 0.0f;
+    // Color value
+    uint32_t color = 0;
+    // Texture coords;
+    float tex_x = 0.0f;
+    float tex_y = 0.0f;
+
+    Vertex() = default;
+
+    static void init() {
+        // start the attribute declaration
+        s_layout.begin()
+                    .add(bgfx::Attrib::Position,  2, bgfx::AttribType::Float)
+                    .add(bgfx::Attrib::Color0,    4, bgfx::AttribType::Uint8, true)
+                    .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+                .end();
+    };
+
+    static bgfx::VertexLayout s_layout;
+};
+
+bgfx::VertexLayout Vertex::s_layout;
+
+// Utils functions
+void resizeBuffer(uint32_t size, std::vector<Vertex>& vertices, std::vector<uint32_t>& indexes)
+{
+    vertices.resize(size);
+    indexes.resize(size);
+}
+
+void updateBufferData(std::vector<Vertex>& vertices, std::vector<uint32_t>& indexes, bgfx::DynamicVertexBufferHandle vbh, bgfx::DynamicIndexBufferHandle ibh)
+{
+    bgfx::update(vbh, 0, bgfx::copy(vertices.data(), static_cast<uint32_t>(vertices.size()) * sizeof(Vertex)));
+    bgfx::update(ibh, 0, bgfx::copy(indexes.data(), static_cast<uint32_t>(indexes.size()) * sizeof(uint32_t)));
+}
+
 class ExampleHelloWorld : public entry::AppI
 {
 public:
+    std::vector<Vertex>   vertices;
+    std::vector<uint32_t> indexes;
+    bgfx::DynamicVertexBufferHandle vbh;
+    bgfx::DynamicIndexBufferHandle  ibh;
+    uint32_t object_count = 53000;
+
 	ExampleHelloWorld(const char* _name, const char* _description, const char* _url)
 		: entry::AppI(_name, _description, _url)
 	{
@@ -49,6 +96,11 @@ public:
 			);
 
 		imguiCreate();
+        
+        Vertex::init();
+        
+        vbh = bgfx::createDynamicVertexBuffer(uint32_t{0}, Vertex::s_layout, BGFX_BUFFER_ALLOW_RESIZE);
+        ibh = bgfx::createDynamicIndexBuffer(uint32_t{0}, BGFX_BUFFER_ALLOW_RESIZE | BGFX_BUFFER_INDEX32);
 	}
 
 	virtual int shutdown() override
@@ -81,33 +133,17 @@ public:
 
 			// Set view 0 default viewport.
 			bgfx::setViewRect(0, 0, 0, uint16_t(m_width), uint16_t(m_height) );
+            
+            object_count += object_count < 55000;
+            const uint32_t vertex_count = 3 * object_count;
+            resizeBuffer(vertex_count, vertices, indexes);
+            updateBufferData(vertices, indexes, vbh, ibh);
 
 			// This dummy draw call is here to make sure that view 0 is cleared
 			// if no other draw calls are submitted to view 0.
 			bgfx::touch(0);
-
-			// Use debug font to print information about this example.
-			bgfx::dbgTextClear();
-			bgfx::dbgTextImage(
-				  bx::max<uint16_t>(uint16_t(m_width /2/8 ), 20)-20
-				, bx::max<uint16_t>(uint16_t(m_height/2/16),  6)-6
-				, 40
-				, 12
-				, s_logo
-				, 160
-				);
-			bgfx::dbgTextPrintf(0, 1, 0x0f, "Color can be changed with ANSI \x1b[9;me\x1b[10;ms\x1b[11;mc\x1b[12;ma\x1b[13;mp\x1b[14;me\x1b[0m code too.");
-
-			bgfx::dbgTextPrintf(80, 1, 0x0f, "\x1b[;0m    \x1b[;1m    \x1b[; 2m    \x1b[; 3m    \x1b[; 4m    \x1b[; 5m    \x1b[; 6m    \x1b[; 7m    \x1b[0m");
-			bgfx::dbgTextPrintf(80, 2, 0x0f, "\x1b[;8m    \x1b[;9m    \x1b[;10m    \x1b[;11m    \x1b[;12m    \x1b[;13m    \x1b[;14m    \x1b[;15m    \x1b[0m");
-
-			const bgfx::Stats* stats = bgfx::getStats();
-			bgfx::dbgTextPrintf(0, 2, 0x0f, "Backbuffer %dW x %dH in pixels, debug text %dW x %dH in characters."
-				, stats->width
-				, stats->height
-				, stats->textWidth
-				, stats->textHeight
-				);
+            
+            bgfx::dbgTextPrintf(0, 0, 0x0f, "Vertices count %d", object_count);
 
 			// Advance to next frame. Rendering thread will be kicked to
 			// process submitted rendering primitives.
